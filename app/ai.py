@@ -13,7 +13,7 @@ import markdown
 def convert_to_markdown(text):
     return markdown.markdown(text)
 
-chat = ChatOpenAI(temperature=0, openai_api_key="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")
+chat = ChatOpenAI(temperature=0, openai_api_key="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")
 
 
 def text_2_category(text:str) -> str:

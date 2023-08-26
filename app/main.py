@@ -58,7 +58,7 @@ def categorize_text(text: str):
 
 event_system_prompt = (
     "You are an assistant. Given a text about an event, structure it with 'Event title: ' with related icon "
-    "infront of title, 'location: ', 'Time: ', and 'Description: '."
+    "infront of 'title: ', 'location: ', 'Time: ', and 'Description: '."
 )
 
 notes_system_prompt = (
@@ -77,7 +77,19 @@ def categorize_text_and_summarize(text: str, category: str):
         return {"error": "Category not supported"}
 
     structurized_text = _chat_completion(text, system_prompt)
-    return {"structurized_text": structurized_text}
+
+    if category.lower() == "events":
+        return {"structurized_text": {
+            "title": structurized_text.split("title: ")[1].split("location: ")[0],
+            "location": structurized_text.split("location: ")[1].split("time: ")[0],
+            "time": structurized_text.split("time: ")[1].split("description: ")[0],
+            "description": structurized_text.split("description: ")[1]
+        }}
+    elif category.lower() == "notes":
+        return {"structurized_text": {
+            "title": structurized_text.split("title: ")[1].split("summary: ")[0],
+            "summary": structurized_text.split("summary: ")[1]
+        }}
 
 # # .wav file only
 # @app.post("/voice_2_text")

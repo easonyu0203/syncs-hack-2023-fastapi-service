@@ -2,10 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import openai
+#pip install speechRecognition
+import speech_recognition as sr
 from dotenv import load_dotenv
 load_dotenv()
 
-openai.organization = "org-PpC659Yxh5y6kPFrZEWI1tiU"
+#openai.organization = "org-PpC659Yxh5y6kPFrZEWI1tiU"
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 app = FastAPI()
@@ -57,13 +59,12 @@ def categorize_text(text: str):
 
 
 event_system_prompt = (
-    "You are an assistant. Given a text about an event, structure it with 'Event title: ' with related icon "
-    "infront of 'title: ', 'location: ', 'Time: ', and 'Description: '."
+    "You are an assistant. Given a text about an event, structure it with 'Event title: ', with related icon in front of 'title: ', 'location: ', 'time: ', 'date: ' which abbreviate the month and display the date in the format (like Aug 23) or No Provided, and 'description: '. Icons should always be placed after every title I tell you to structure."
 )
 
+
 notes_system_prompt = (
-    "You are an assistant. Given a text that's a note, structure it with 'Note Title: ' with related icon and "
-    "'Summary: ' in dot points."
+    "You are an assistant. Given a text that's a note, structure it with 'Note Title: ' with related icon infront , and 'summary: ' in dot points. icon should always be placed after of every title I tell you to structured"
 )
 
 
@@ -74,33 +75,93 @@ def categorize_text_and_summarize(text: str, category: str):
     elif category.lower() == "notes":
         system_prompt = notes_system_prompt
     else:
-        return {"error": "Category not supported"}
+        return {"error": "Category not supported, we don't support summarize unsupported categories."}
 
     structurized_text = _chat_completion(text, system_prompt)
+    print(structurized_text)
+    try:
+        if category.lower() == "events":
+            title = structurized_text.split("title:")[1].split("location:")[0].strip()
+            location = structurized_text.split("location:")[1].split("time:")[0].strip()
+            time = structurized_text.split("time:")[1].split("description:")[0].strip()
+            extracted_str = structurized_text.split("date:")[1].split("description:")[0].strip()
+            icon_date = extracted_str[0].upper() + extracted_str[1:]
+            description = structurized_text.split("description:")[1].strip()
+            
+            if not (title and location and time and description and icon_date):
+                raise ValueError("Incomplete data received for 'events' category")
 
-    if category.lower() == "events":
-        return {"structurized_text": {
-            "title": structurized_text.split("title:")[1].split("location:")[0],
-            "location": structurized_text.split("location:")[1].split("time:")[0],
-            "time": structurized_text.split("time:")[1].split("description:")[0],
-            "description": structurized_text.split("description:")[1]
-        }}
-    elif category.lower() == "notes":
-        return {"structurized_text": {
-            "title": structurized_text.split("title:")[1].split("summary:")[0],
-            "summary": structurized_text.split("summary:")[1]
-        }}
+            return {
+                "structurized_text": {
+                    "title": title,
+                    "location": location,
+                    "time": time,
+                    "icon_date": icon_date,
+                    "description": description
+                }
+            }
+        elif category.lower() == "notes":
+            title = structurized_text.split("title:")[1].split("summary:")[0].strip()
+            summary = structurized_text.split("summary:")[1].strip()
 
-# # .wav file only
-# @app.post("/voice_2_text")
-# def voice_2_text(path: str):
-#     if path.endswith(".wav"):
-#         return speech_to_text(path)  # ai.py function
-#     return {"error": "File type not supported"}
-#
-#
-# @app.post("/voices_recording_summary")
-# def voices_recording_summary(text: str):
-#     return speech_text_summary(text)  # ai.py function
+            if not (title and summary):
+                raise ValueError("Incomplete data received for 'notes' category")
+
+            return {
+                "structurized_text": {
+                    "title": title,
+                    "summary": summary
+                }
+            }
+    except (IndexError, ValueError) as e:
+        return {"error": f"Error while structuring the text @ categorize_text_and_summarize function with text: {str(e)}"}
+
+# .wav file only
+@app.post("/voice_2_text")
+def voice_2_text(filename: str):
+    if not filename.endswith(".wav"):
+        return "error: Only.wav files are supported"
+    recognizer = sr.Recognizer()
+
+    with sr.AudioFile(filename) as source:
+        audio_data = recognizer.record(source)
+        
+        try:
+            text = recognizer.recognize_google(audio_data)
+            return text
+        except sr.UnknownValueError:
+            return "Audio could not be understood"
+        except sr.RequestError:
+            return "API unavailable or unresponsive"
+
+
+@app.post("/voices_recording_summary")
+def voices_recording_summary(text: str):
+    if text.startswith("error"):
+        return {"error": str}
+    notes_system_prompt = (
+    "You are an assistant. Given a text that's generate from recording, structure it with 'recording title: ', and 'summary: ' in dot points."
+    )  
+    
+    structurized_text = _chat_completion(text, system_prompt)
+    try:
+        structurized_text = _chat_completion(text, notes_system_prompt)
+
+        title = structurized_text.split("recording title:")[1].split("Summary:")[0].strip()
+        summary = structurized_text.split("summary:")[1].strip()
+
+        # Check if all fields have been extracted properly
+        if not (title and summary):
+            raise ValueError("Incomplete data received for 'voices recording' category")
+
+        return {
+            "structurized_text": {
+                "title": title,
+                "summary": summary
+            }
+        }
+    except (IndexError, ValueError) as e:
+        return {"error": f"Error while structuring the text: {str(e)}"}
+    
 
 # print('running on http://127.0.0.1:8000')

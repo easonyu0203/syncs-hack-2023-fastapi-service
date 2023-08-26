@@ -16,7 +16,7 @@ import json
 # openai_api_key = os.getenv('OPENAI_API_KEY')
 # print(openai_api_key)
 
-chat = ChatOpenAI(temperature=0, openai_api_key="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")
+chat = ChatOpenAI(temperature=0, openai_api_key="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")
 
 
 example = "Sync, Event on September 22~23, wellcommmee to have fun with us @ Usyd"
@@ -73,10 +73,10 @@ def structurize_text(text: str, category: str = "unknown") -> str:
             return 'error'
         
         return json.dumps({
-            "Event title": temp[0],
-            "location": temp[1],
-            "Time": temp[2],
-            "Description": temp[3]
+            temp[0].split(':')[0]: temp[0].split(':')[1],
+            temp[1].split(':')[0]: temp[1].split(':')[1],
+            temp[2].split(':')[0]: temp[2].split(':')[1],
+            temp[3].split(':')[0]: temp[3].split(':')[1]
         })
     elif category.lower() == "notes":
         temp = structured_text.split("\n\n")
@@ -85,8 +85,8 @@ def structurize_text(text: str, category: str = "unknown") -> str:
             return 'error'
         
         return json.dumps({
-            "Note Title": temp[0],
-            "Summary": temp[1]
+            temp[0].split(':')[0]: temp[0].split(':')[1],
+            temp[1].split(':')[0]: temp[1].split(':')[1]
         })    
     else:
         return json.dumps({"error": structured_text})

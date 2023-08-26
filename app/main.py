@@ -46,7 +46,7 @@ def read_root():
     return {"Hello": "World after deployment"}
 
 
-@app.post("/category")
+@app.get("/category")
 def categorize_text(text: str):
     category = _chat_completion(text, system_prompt)
 
@@ -67,7 +67,7 @@ notes_system_prompt = (
 )
 
 
-@app.post("/structurize_text")
+@app.get("/structurize_text")
 def categorize_text_and_summarize(text: str, category: str):
     if category.lower() == "events":
         system_prompt = event_system_prompt

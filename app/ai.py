@@ -1,51 +1,71 @@
-from langchain.chat_models import ChatOpenAI
-from langchain.prompts.chat import (
-    ChatPromptTemplate,
-    SystemMessagePromptTemplate,
-    AIMessagePromptTemplate,
-    HumanMessagePromptTemplate,
-)
-from langchain.schema import AIMessage, HumanMessage, SystemMessage
+import os
+import openai
+openai.organization = "org-PpC659Yxh5y6kPFrZEWI1tiU"
+openai.api_key = os.getenv("OPENAI_API_KEY")
 import json
 import speech_recognition as sr
 import markdown
 
+system_prompt = (
+    "You are an assistant that categorizes text. If the text mentions specific dates, times, or events, you reply "
+    "'events'. If the text seems meaningful and can be summarized, even if it's a general statement or fact, "
+    "you reply 'notes'. If the text appears nonsensical, repetitive, or cannot be summarized meaningfully, "
+    "you reply 'unknown'."
+)
+
+response = openai.ChatCompletion.create(
+  model="gpt-3.5-turbo",
+  messages=[
+      {"role": "system", "content": system_prompt}
+  ],
+  temperature=0.2,
+)
+
 def convert_to_markdown(text):
     return markdown.markdown(text)
 
-chat = ChatOpenAI(temperature=0, openai_api_key="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")
-
 
 def text_2_category(text:str) -> str:
-  template = (
-    "You are an assistant that categorizes text. If the text mentions specific dates, times, or events, you reply 'events'. If the text seems meaningful and can be summarized, even if it's a general statement or fact, you reply 'notes'. If the text appears nonsensical, repetitive, or cannot be summarized meaningfully, you reply 'unknown'."
-  )
-  system_message_template = SystemMessagePromptTemplate.from_template(template)
-  human_template = "{text}"
-  human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "human", "content": text}
+        ],
+        temperature=0.2,
+    )
 
-  chat_template = ChatPromptTemplate.from_messages(
-      [system_message_template, human_message_prompt]
-  )
+    category = response['choices'][0]['message']['content'].lower()
 
-  formatted_prompt = chat_template.format_prompt(text=text).to_messages()
-  category = chat(formatted_prompt).content
-  #return json.dumps({"category": category})
-  return category
+    if category != "events" and category != "notes":
+        category = "unknown"
+
+    return category
+
+
+event_system_prompt = (
+    "You are an assistant. Given a text about an event, structure it with 'Event title: ' with related icon "
+    "infront of title, 'location: ', 'Time: ', and 'Description: '."
+)
+
+notes_system_prompt = (
+    "You are an assistant. Given a text that's a note, structure it with 'Note Title: ' with related icon and "
+    "'Summary: ' in dot points."
+)
 
 def structurize_text(text: str, category: str = "unknown") -> str:
     if category.lower() == "events":
         template = (
-            "You are an assistant. Given a text about an event, structure it with 'Event title: ' with related icon infront of title, 'location: ', 'Time: ', and 'Description: '."
+            "You are an assistant. Given a text about an event, structure it with 'Event title: ' with related icon "
+            "infront of title, 'location: ', 'Time: ', and 'Description: '."
         )
     elif category.lower() == "notes":
         template = (
-            "You are an assistant. Given a text that's a note, structure it with 'Note Title: ' with related icon and 'Summary: ' in dot points."
+            "You are an assistant. Given a text that's a note, structure it with 'Note Title: ' with related icon and "
+            "'Summary: ' in dot points."
         )
     else:
-        template = (
-              "Reply 'Sorry, we don't understand your content. Please retake or reupload the picture. Thank you.' with error icon at front of the text."
-          )
+        return json.dumps({"error": "Invalid category"})
 
     system_message_template = SystemMessagePromptTemplate.from_template(template)
     human_template = "{text}"

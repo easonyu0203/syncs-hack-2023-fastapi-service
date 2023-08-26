@@ -59,8 +59,9 @@ def categorize_text(text: str):
 
 
 event_system_prompt = (
-    "You are an assistant. Given a text about an event, structure it with 'Event title: ', with related icon infront of 'title: ', 'location: ', 'time: ', and 'description: '. icon should always be placed after every title I tell you to structured"
+    "You are an assistant. Given a text about an event, structure it with 'Event title: ', with related icon in front of 'title: ', 'location: ', 'time: ', 'date: ' which abbreviate the month and display the date in the format (like Aug 23) or No Provided, and 'description: '. Icons should always be placed after every title I tell you to structure."
 )
+
 
 notes_system_prompt = (
     "You are an assistant. Given a text that's a note, structure it with 'Note Title: ' with related icon infront , and 'summary: ' in dot points. icon should always be placed after of every title I tell you to structured"
@@ -77,15 +78,17 @@ def categorize_text_and_summarize(text: str, category: str):
         return {"error": "Category not supported, we don't support summarize unsupported categories."}
 
     structurized_text = _chat_completion(text, system_prompt)
-    
+    print(structurized_text)
     try:
         if category.lower() == "events":
             title = structurized_text.split("title:")[1].split("location:")[0].strip()
             location = structurized_text.split("location:")[1].split("time:")[0].strip()
             time = structurized_text.split("time:")[1].split("description:")[0].strip()
+            extracted_str = structurized_text.split("date:")[1].split("description:")[0].strip()
+            icon_date = extracted_str[0].upper() + extracted_str[1:]
             description = structurized_text.split("description:")[1].strip()
             
-            if not (title and location and time and description):
+            if not (title and location and time and description and icon_date):
                 raise ValueError("Incomplete data received for 'events' category")
 
             return {
@@ -93,6 +96,7 @@ def categorize_text_and_summarize(text: str, category: str):
                     "title": title,
                     "location": location,
                     "time": time,
+                    "icon_date": icon_date,
                     "description": description
                 }
             }
@@ -142,7 +146,6 @@ def voices_recording_summary(text: str):
     structurized_text = _chat_completion(text, system_prompt)
     try:
         structurized_text = _chat_completion(text, notes_system_prompt)
-        print(structurized_text)
 
         title = structurized_text.split("recording title:")[1].split("Summary:")[0].strip()
         summary = structurized_text.split("summary:")[1].strip()

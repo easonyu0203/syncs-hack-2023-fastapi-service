@@ -8,15 +8,15 @@ from langchain.prompts.chat import (
 from langchain.schema import AIMessage, HumanMessage, SystemMessage
 import json
 
-# import os
-# from dotenv import load_dotenv
+import os
+from dotenv import load_dotenv
 
-# load_dotenv()
+load_dotenv()
 
-# openai_api_key = os.getenv('OPENAI_API_KEY')
-# print(openai_api_key)
+openai_api_key = os.getenv('OPENAI_API_KEY')
 
-chat = ChatOpenAI(temperature=0, openai_api_key="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")
+
+chat = ChatOpenAI(temperature=0, openai_api_key=openai_api_key)
 
 
 example = "Sync, Event on September 22~23, wellcommmee to have fun with us @ Usyd"
